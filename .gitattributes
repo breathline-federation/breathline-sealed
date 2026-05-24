@@ -1,0 +1,3 @@
+# Ensure the sealed tarball and manifest are always treated as binary for diff purposes
+*.tar.gz binary
+SEAL_MANIFEST.txt text eol=lf
