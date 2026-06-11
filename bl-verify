@@ -31,28 +31,28 @@ LAYERS = [
 ]
 
 
-def _primitives_path() -> str:
-    for c in (os.path.join(ROOT, "worktrees", "dev"), ROOT):
-        if os.path.isdir(os.path.join(c, "breathline_primitives")):
-            return c
-    return ROOT
-
-
 def _run_primitive_selftest(verbose: bool) -> bool:
-    """Actually exercise the sealed primitives — a P1 sign/verify roundtrip + a P5 Merkle root. The proof
-    is not that the files exist, but that the crypto *works*."""
-    sys.path.insert(0, _primitives_path())
+    """Actually exercise the sealed primitives — a P1 ECDSA sign/verify roundtrip + a P5 Merkle root —
+    importing the layer modules DIRECTLY from the cloned tree, so this works on a fresh public clone with
+    no package install. The proof is not that the files exist, but that the crypto *works*."""
+    for layer in ("layer_1_root", "layer_5_shields"):
+        p = os.path.join(SEALED, layer)
+        if p not in sys.path:
+            sys.path.insert(0, p)
     try:
-        import breathline_primitives as bp
+        import keygen          # P1 — layer_1_root
+        import sign            # P1
+        import verify          # P1
+        import merkle_tree     # P5 — layer_5_shields
     except Exception as e:  # noqa: BLE001
-        print(f"  ✗ breathline_primitives not importable: {e}")
+        print(f"  ✗ sealed primitive modules not importable: {e}")
         return False
     try:
-        kp = bp.generate_keypair()
-        sig = bp.sign(kp.private_key, b"bl-verify self-test")
-        if not bp.verify(kp.public_key, b"bl-verify self-test", sig):
+        kp = keygen.generate_keypair()
+        sig = sign.sign(kp.private_key, b"bl-verify self-test")
+        if not verify.verify(kp.public_key, b"bl-verify self-test", sig):
             print("  ✗ P1 ECDSA sign/verify roundtrip FAILED"); return False
-        root = bp.MerkleTree([b"a", b"b", b"c"]).get_root()
+        root = merkle_tree.MerkleTree([b"a", b"b", b"c"]).get_root()
         if not root:
             print("  ✗ P5 Merkle root empty"); return False
         if verbose:
